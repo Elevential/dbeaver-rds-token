@@ -2,7 +2,7 @@
 <feature
       id="com.example.dbeaver.ext.rdsiam.feature"
       label="DBeaver AWS RDS IAM Authentication"
-      version="1.0.0"
+      version="0.0.2"
       provider-name="Example">
 
    <description>

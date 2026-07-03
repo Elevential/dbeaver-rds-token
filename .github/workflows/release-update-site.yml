@@ -1,7 +1,13 @@
 name: Publish update site
 
 # Builds the plugin + p2 update site and publishes it to GitHub Pages.
-# Triggers on version tags like v1.2.3 (and can be run manually).
+#
+# Version scheme:
+#   - push to main/master -> <base>.<UTC-timestamp>  (e.g. 0.0.2.20260703T2015)
+#     so every push publishes a strictly-newer build that DBeaver's
+#     "Check for Updates" will pick up.
+#   - tag vX.Y.Z          -> exactly X.Y.Z            (clean, pinned release)
+#   <base> is the major.minor.micro from META-INF/MANIFEST.MF (Bundle-Version).
 #
 # One-time repo setup:
 #   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
@@ -11,6 +17,7 @@ name: Publish update site
 
 on:
   push:
+    branches: [main, master]
     tags:
       - 'v*'
   workflow_dispatch: {}
@@ -47,21 +54,25 @@ jobs:
       - name: Derive version
         id: ver
         run: |
+          # Base = major.minor.micro from the committed Bundle-Version.
+          BASE=$(sed -n 's/^Bundle-Version: *//p' META-INF/MANIFEST.MF | cut -d. -f1-3)
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            VER="${GITHUB_REF_NAME#v}"                 # v1.2.3 -> 1.2.3
+            VER="${GITHUB_REF_NAME#v}"                       # v0.0.3 -> 0.0.3
           else
-            VER="0.0.0.dev$(date +%Y%m%d%H%M%S)"       # manual runs
+            VER="${BASE}.$(date -u +%Y%m%dT%H%M%S)"          # 0.0.2.20260703T201500
           fi
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          echo "Building version $VER"
+          echo "base=$BASE"       >> "$GITHUB_OUTPUT"
+          echo "version=$VER"     >> "$GITHUB_OUTPUT"
+          echo "Building version $VER (base $BASE)"
 
       - name: Stamp version into manifest & feature
         run: |
           VER="${{ steps.ver.outputs.version }}"
+          BASE="${{ steps.ver.outputs.base }}"
           sed -i "s/^Bundle-Version: .*/Bundle-Version: ${VER}/" META-INF/MANIFEST.MF
-          # Feature element version is the committed placeholder 1.0.0; the plugin
-          # reference stays 0.0.0 (= any) so it is left untouched.
-          sed -i "s/version=\"1.0.0\"/version=\"${VER}\"/" feature/feature.xml feature/category.xml
+          # Replace the committed base feature version; the plugin reference stays
+          # 0.0.0 (= any), and the XML declaration (version="1.0") is untouched.
+          sed -i "s/version=\"${BASE}\"/version=\"${VER}\"/" feature/feature.xml feature/category.xml
 
       - name: Download DBeaver CE (build/publish toolchain)
         run: |

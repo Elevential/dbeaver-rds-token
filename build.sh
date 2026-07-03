@@ -5,14 +5,14 @@
 # that DBeaver's dropins folder.
 #
 # Usage:
-#   ./build.sh                # build only -> ./com.example.dbeaver.ext.rdsiam_1.0.0.jar
+#   ./build.sh                # build only -> ./com.example.dbeaver.ext.rdsiam_0.0.2.jar
 #   ./build.sh --install      # build and copy into DBeaver's dropins
 #
 # Env overrides:
 #   ECLIPSE_HOME  dir containing plugins/ (Linux DBeaver, or a target platform)
 #   DBEAVER_APP   path to DBeaver.app        (default: /Applications/DBeaver.app)
 #   JAVA_HOME     a JDK 21+ (needs javac)    (default: auto-detected)
-#   VERSION       plugin version             (default: 1.0.0)
+#   VERSION       plugin version             (default: 0.0.2)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -35,7 +35,7 @@ PLUGINS="$ECLIPSE_HOME/plugins"
 DROPINS="$ECLIPSE_HOME/dropins"
 
 BSN="com.example.dbeaver.ext.rdsiam"
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-0.0.2}"
 JARNAME="${BSN}_${VERSION}.jar"
 
 # Locate a JDK 21+ (DBeaver 26 ships Java 21 bytecode).
