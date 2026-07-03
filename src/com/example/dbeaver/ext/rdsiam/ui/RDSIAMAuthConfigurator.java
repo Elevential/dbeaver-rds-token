@@ -167,9 +167,22 @@ public class RDSIAMAuthConfigurator
         }
     }
 
-    /** When a profile is selected, the manual key fields are unused; disable them. */
+    /**
+     * When a profile is selected, the manual key fields are unused: clear and
+     * disable them (credentials come from the profile instead).
+     */
     private void onProfileChanged() {
         boolean useProfile = isProfileSelected();
+        if (useProfile) {
+            autoFilling = true; // suppress the fields' modify listeners while clearing
+            try {
+                setText(accessKeyText, "");
+                setText(secretKeyText, "");
+                setText(sessionTokenText, "");
+            } finally {
+                autoFilling = false;
+            }
+        }
         setEnabled(accessKeyText, !useProfile);
         setEnabled(secretKeyText, !useProfile);
         setEnabled(sessionTokenText, !useProfile);
