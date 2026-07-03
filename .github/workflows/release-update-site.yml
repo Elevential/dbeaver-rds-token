@@ -27,7 +27,7 @@ concurrency:
 env:
   # DBeaver CE Linux build to compile the plugin against and to borrow the p2
   # publisher from. Pin to a specific version for reproducibility if desired.
-  DBEAVER_URL: https://dbeaver.io/files/dbeaver-ce-latest-linux.gtk.x86_64-nojdk.tar.gz
+  DBEAVER_URL: https://dbeaver.io/files/dbeaver-ce-latest-linux.gtk.x86_64.tar.gz
 
 jobs:
   publish:
