@@ -18,6 +18,7 @@ public class RDSIAMCredentials extends AuthModelDatabaseNativeCredentials {
     private String awsSecretAccessKey;
     private String awsSessionToken;
     private String region;
+    private String profile;
 
     public String getAwsAccessKeyId() {
         return awsAccessKeyId;
@@ -49,5 +50,13 @@ public class RDSIAMCredentials extends AuthModelDatabaseNativeCredentials {
 
     public void setRegion(String region) {
         this.region = region;
+    }
+
+    public String getProfile() {
+        return profile;
+    }
+
+    public void setProfile(String profile) {
+        this.profile = profile;
     }
 }

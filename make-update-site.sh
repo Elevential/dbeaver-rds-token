@@ -93,6 +93,26 @@ echo "Publishing category..."
     -categoryDefinition "file:$HERE/feature/category.xml" \
     -compress
 
+# A p2 update site has no landing page, so browsing the host URL looks "empty".
+# Write a small index.html so visitors see it is live and how to use it.
+cat > "$REPO/index.html" <<'HTML'
+<!doctype html>
+<meta charset="utf-8">
+<title>DBeaver AWS RDS IAM — Update Site</title>
+<style>body{font:16px system-ui,sans-serif;max-width:640px;margin:3rem auto;padding:0 1rem;line-height:1.5}code{background:#f2f2f2;padding:.1em .3em;border-radius:3px}</style>
+<h1>DBeaver AWS RDS IAM — Update Site</h1>
+<p>This is an Eclipse&nbsp;p2 update site (not a normal web page). Install it from
+inside DBeaver:</p>
+<ol>
+  <li><strong>Help → Install New Software…</strong></li>
+  <li><strong>Add… →</strong> paste this page's URL (the address in your browser).</li>
+  <li>Check <strong>AWS Integrations → DBeaver AWS RDS IAM Authentication</strong>.</li>
+  <li><strong>Next → Finish</strong>, then restart DBeaver.</li>
+</ol>
+<p>Metadata: <a href="content.jar">content.jar</a> ·
+<a href="artifacts.jar">artifacts.jar</a></p>
+HTML
+
 echo ""
 echo "Update site generated at: $REPO"
 ls -la "$REPO"

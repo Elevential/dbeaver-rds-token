@@ -4,9 +4,12 @@
 package com.example.dbeaver.ext.rdsiam.ui;
 
 import com.example.dbeaver.ext.rdsiam.AwsEnvVars;
+import com.example.dbeaver.ext.rdsiam.AwsProfiles;
 import com.example.dbeaver.ext.rdsiam.RDSIAMConstants;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
@@ -16,6 +19,7 @@ import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.ui.IObjectPropertyConfigurator;
 import org.jkiss.dbeaver.ui.UIUtils;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,10 +32,14 @@ import java.util.Map;
 public class RDSIAMAuthConfigurator
     implements IObjectPropertyConfigurator<DBAAuthModel<?>, DBPDataSourceContainer> {
 
+    /** First combo item, meaning "don't use a profile — use the keys below". */
+    private static final String MANUAL_ITEM = "(none — enter keys manually)";
+
     private Runnable changeListener;
     private boolean autoFilling;
 
     private Text userNameText;
+    private Combo profileCombo;
     private Text regionText;
     private Text accessKeyText;
     private Text secretKeyText;
@@ -53,6 +61,21 @@ public class RDSIAMAuthConfigurator
         userNameText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         userNameText.setToolTipText("Database user configured for IAM authentication (e.g. granted rds_iam).");
         attach(userNameText, null);
+
+        UIUtils.createControlLabel(authPanel, "AWS Profile");
+        profileCombo = new Combo(authPanel, SWT.DROP_DOWN | SWT.READ_ONLY);
+        profileCombo.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        profileCombo.add(MANUAL_ITEM);
+        List<String> profiles = AwsProfiles.list();
+        for (String p : profiles) {
+            profileCombo.add(p);
+        }
+        profileCombo.select(0);
+        profileCombo.setToolTipText(profiles.isEmpty()
+            ? "No AWS profiles found in ~/.aws/config. Run 'aws configure sso' (or 'aws configure') to add one."
+            : "Use credentials from a local AWS CLI profile (SSO / assume-role / static). "
+                + "Resolved via the AWS CLI at connect time.");
+        profileCombo.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> onProfileChanged()));
 
         UIUtils.createControlLabel(authPanel, "AWS Region");
         regionText = new Text(authPanel, SWT.BORDER);
@@ -144,20 +167,59 @@ public class RDSIAMAuthConfigurator
         }
     }
 
+    /** When a profile is selected, the manual key fields are unused; disable them. */
+    private void onProfileChanged() {
+        boolean useProfile = isProfileSelected();
+        setEnabled(accessKeyText, !useProfile);
+        setEnabled(secretKeyText, !useProfile);
+        setEnabled(sessionTokenText, !useProfile);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    private boolean isProfileSelected() {
+        return profileCombo != null && !profileCombo.isDisposed() && profileCombo.getSelectionIndex() > 0;
+    }
+
+    private String selectedProfile() {
+        return isProfileSelected() ? profileCombo.getItem(profileCombo.getSelectionIndex()) : null;
+    }
+
+    private void selectProfileItem(String profile) {
+        if (profileCombo == null || profileCombo.isDisposed()) {
+            return;
+        }
+        int idx = 0;
+        if (profile != null && !profile.isEmpty()) {
+            int found = profileCombo.indexOf(profile);
+            if (found < 0) {
+                // Saved profile is no longer in the local config; keep it selectable.
+                profileCombo.add(profile);
+                found = profileCombo.indexOf(profile);
+            }
+            idx = found;
+        }
+        profileCombo.select(idx);
+    }
+
     @Override
     public void loadSettings(DBPDataSourceContainer dataSource) {
         DBPConnectionConfiguration cfg = dataSource.getConnectionConfiguration();
         setText(userNameText, cfg.getUserName());
+        selectProfileItem(cfg.getAuthProperty(RDSIAMConstants.PROP_PROFILE));
         setText(regionText, cfg.getAuthProperty(RDSIAMConstants.PROP_REGION));
         setText(accessKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID));
         setText(secretKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY));
         setText(sessionTokenText, cfg.getAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN));
+        onProfileChanged();
     }
 
     @Override
     public void saveSettings(DBPDataSourceContainer dataSource) {
         DBPConnectionConfiguration cfg = dataSource.getConnectionConfiguration();
         cfg.setUserName(trim(userNameText));
+        cfg.setAuthProperty(RDSIAMConstants.PROP_PROFILE, selectedProfile());
         cfg.setAuthProperty(RDSIAMConstants.PROP_REGION, trimToNull(regionText));
         cfg.setAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID, trimToNull(accessKeyText));
         cfg.setAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY, trimToNull(secretKeyText));
@@ -171,7 +233,17 @@ public class RDSIAMAuthConfigurator
 
     @Override
     public boolean isComplete() {
+        if (isProfileSelected()) {
+            // Credentials come from the profile; only the DB user is required here.
+            return notEmpty(userNameText);
+        }
         return notEmpty(userNameText) && notEmpty(accessKeyText) && notEmpty(secretKeyText);
+    }
+
+    private static void setEnabled(Text field, boolean enabled) {
+        if (field != null && !field.isDisposed()) {
+            field.setEnabled(enabled);
+        }
     }
 
     private static boolean notEmpty(Text text) {

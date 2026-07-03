@@ -41,6 +41,7 @@ public class RDSIAMAuthModel extends AuthModelDatabaseNative<RDSIAMCredentials> 
         credentials.setAwsSecretAccessKey(configuration.getAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY));
         credentials.setAwsSessionToken(configuration.getAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN));
         credentials.setRegion(configuration.getAuthProperty(RDSIAMConstants.PROP_REGION));
+        credentials.setProfile(configuration.getAuthProperty(RDSIAMConstants.PROP_PROFILE));
         return credentials;
     }
 
@@ -54,6 +55,7 @@ public class RDSIAMAuthModel extends AuthModelDatabaseNative<RDSIAMCredentials> 
         configuration.setAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY, credentials.getAwsSecretAccessKey());
         configuration.setAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN, credentials.getAwsSessionToken());
         configuration.setAuthProperty(RDSIAMConstants.PROP_REGION, credentials.getRegion());
+        configuration.setAuthProperty(RDSIAMConstants.PROP_PROFILE, credentials.getProfile());
         // The generated IAM token is transient; never persist it as a password.
         credentials.setUserPassword(null);
         super.saveCredentials(dataSource, configuration, credentials);
@@ -71,7 +73,32 @@ public class RDSIAMAuthModel extends AuthModelDatabaseNative<RDSIAMCredentials> 
         String portStr = configuration.getHostPort();
         String user = credentials.getUserName();
 
+        // Resolve the AWS credentials to sign with. If a CLI profile is chosen,
+        // ask the AWS CLI to export credentials for it (handles SSO, assume-role,
+        // static keys); otherwise use the manually entered keys.
+        String accessKeyId = credentials.getAwsAccessKeyId();
+        String secretAccessKey = credentials.getAwsSecretAccessKey();
+        String sessionToken = credentials.getAwsSessionToken();
         String region = credentials.getRegion();
+
+        String profile = credentials.getProfile();
+        if (profile != null && !profile.isEmpty()) {
+            try {
+                monitor.subTask("Resolving AWS credentials for profile '" + profile + "'");
+                AwsCli.Credentials resolved = AwsCli.exportCredentials(profile);
+                accessKeyId = resolved.accessKeyId;
+                secretAccessKey = resolved.secretAccessKey;
+                sessionToken = resolved.sessionToken;
+            } catch (Exception e) {
+                throw new DBException("Could not obtain AWS credentials for profile '" + profile
+                    + "'. If this is an SSO profile, run 'aws sso login --profile " + profile
+                    + "' first.\n" + e.getMessage(), e);
+            }
+            if (region == null || region.isEmpty()) {
+                region = AwsCli.getRegion(profile);
+            }
+        }
+
         if (region == null || region.isEmpty()) {
             region = RDSAuthTokenGenerator.regionFromHost(host);
         }
@@ -91,9 +118,9 @@ public class RDSIAMAuthModel extends AuthModelDatabaseNative<RDSIAMCredentials> 
                 port,
                 user,
                 region,
-                credentials.getAwsAccessKeyId(),
-                credentials.getAwsSecretAccessKey(),
-                credentials.getAwsSessionToken());
+                accessKeyId,
+                secretAccessKey,
+                sessionToken);
         } catch (DBException e) {
             throw e;
         } catch (Exception e) {

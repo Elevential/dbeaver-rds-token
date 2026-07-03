@@ -23,6 +23,13 @@ public final class RDSIAMConstants {
     /** Auth-property key for the AWS region (may be blank -> parsed from host). */
     public static final String PROP_REGION = "@rds-iam.region";
 
+    /**
+     * Auth-property key for a selected AWS CLI profile. When set, credentials are
+     * resolved from that profile (SSO / assume-role / static) via the AWS CLI at
+     * connect time, and the manually entered keys are ignored.
+     */
+    public static final String PROP_PROFILE = "@rds-iam.profile";
+
     private RDSIAMConstants() {
     }
 }
