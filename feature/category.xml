@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="com.example.dbeaver.ext.rdsiam.feature" version="1.0.0">
+      <category name="com.example.dbeaver.ext.rdsiam.category"/>
+   </feature>
+   <category-def name="com.example.dbeaver.ext.rdsiam.category" label="AWS Integrations">
+      <description>DBeaver AWS RDS IAM authentication.</description>
+   </category-def>
+</site>

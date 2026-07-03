@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="com.example.dbeaver.ext.rdsiam.feature"
+      label="DBeaver AWS RDS IAM Authentication"
+      version="1.0.0"
+      provider-name="Example">
+
+   <description>
+      Adds an "AWS RDS IAM" authentication model to DBeaver. Connect to Amazon
+      RDS (PostgreSQL / MySQL / MariaDB) using a short-lived IAM auth token
+      generated from AWS credentials, instead of a static password.
+   </description>
+
+   <copyright>
+      Example.
+   </copyright>
+
+   <license url="https://www.apache.org/licenses/LICENSE-2.0">
+      Licensed under the Apache License, Version 2.0.
+   </license>
+
+   <plugin
+         id="com.example.dbeaver.ext.rdsiam"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

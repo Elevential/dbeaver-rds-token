@@ -1,0 +1,195 @@
+/*
+ * DBeaver AWS RDS IAM Authentication extension.
+ */
+package com.example.dbeaver.ext.rdsiam.ui;
+
+import com.example.dbeaver.ext.rdsiam.AwsEnvVars;
+import com.example.dbeaver.ext.rdsiam.RDSIAMConstants;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
+import org.jkiss.dbeaver.model.DBPDataSourceContainer;
+import org.jkiss.dbeaver.model.access.DBAAuthModel;
+import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
+import org.jkiss.dbeaver.ui.IObjectPropertyConfigurator;
+import org.jkiss.dbeaver.ui.UIUtils;
+
+import java.util.Map;
+
+/**
+ * Connection-dialog panel for the AWS RDS IAM auth model.
+ *
+ * Renders the database user plus the AWS region and credentials used to
+ * generate the IAM token. There is deliberately no static password field —
+ * the password is generated at connect time.
+ */
+public class RDSIAMAuthConfigurator
+    implements IObjectPropertyConfigurator<DBAAuthModel<?>, DBPDataSourceContainer> {
+
+    private Runnable changeListener;
+    private boolean autoFilling;
+
+    private Text userNameText;
+    private Text regionText;
+    private Text accessKeyText;
+    private Text secretKeyText;
+    private Text sessionTokenText;
+
+    @Override
+    public void createControl(Composite authPanel, DBAAuthModel<?> object, Runnable propertyChangeListener) {
+        this.changeListener = propertyChangeListener;
+
+        Label hint = new Label(authPanel, SWT.WRAP);
+        hint.setText("Tip: paste your \"export AWS_…\" / \"set AWS_…\" / \"$env:AWS_…\" block "
+            + "into any field to auto-fill the credentials.");
+        GridData hintData = new GridData(GridData.FILL_HORIZONTAL);
+        hintData.horizontalSpan = 2;
+        hint.setLayoutData(hintData);
+
+        UIUtils.createControlLabel(authPanel, "Database user");
+        userNameText = new Text(authPanel, SWT.BORDER);
+        userNameText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        userNameText.setToolTipText("Database user configured for IAM authentication (e.g. granted rds_iam).");
+        attach(userNameText, null);
+
+        UIUtils.createControlLabel(authPanel, "AWS Region");
+        regionText = new Text(authPanel, SWT.BORDER);
+        regionText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        regionText.setMessage("auto-detected from host");
+        regionText.setToolTipText("Leave blank to derive the region from the RDS host name.");
+        attach(regionText, "AWS_REGION");
+
+        UIUtils.createControlLabel(authPanel, "AWS Access Key ID");
+        accessKeyText = new Text(authPanel, SWT.BORDER);
+        accessKeyText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        attach(accessKeyText, "AWS_ACCESS_KEY_ID");
+
+        UIUtils.createControlLabel(authPanel, "AWS Secret Access Key");
+        secretKeyText = new Text(authPanel, SWT.BORDER | SWT.PASSWORD);
+        secretKeyText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        attach(secretKeyText, "AWS_SECRET_ACCESS_KEY");
+
+        UIUtils.createControlLabel(authPanel, "AWS Session Token");
+        sessionTokenText = new Text(authPanel, SWT.BORDER | SWT.PASSWORD);
+        sessionTokenText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        sessionTokenText.setToolTipText("Optional. Required only for temporary (STS) credentials.");
+        attach(sessionTokenText, "AWS_SESSION_TOKEN");
+    }
+
+    /**
+     * Adds a modify listener that both notifies the dialog of changes and, if the
+     * user pastes a shell "export AWS_.../set AWS_.../$env:AWS_..." block, spreads
+     * the parsed values across the credential fields.
+     *
+     * @param ownVar the AWS_* variable this field represents, or null (user name).
+     */
+    private void attach(Text field, String ownVar) {
+        field.addModifyListener(e -> onModify(field, ownVar));
+    }
+
+    private void onModify(Text source, String ownVar) {
+        if (autoFilling) {
+            // Ignore programmatic updates made while distributing a pasted block.
+            return;
+        }
+        if (AwsEnvVars.looksLikeCredentialsBlock(source.getText())) {
+            autoFillFrom(source, ownVar);
+        } else if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    private void autoFillFrom(Text source, String ownVar) {
+        Map<String, String> vars = AwsEnvVars.parse(source.getText());
+        autoFilling = true;
+        try {
+            applyIfPresent(accessKeyText, vars.get("AWS_ACCESS_KEY_ID"));
+            applyIfPresent(secretKeyText, vars.get("AWS_SECRET_ACCESS_KEY"));
+            applyIfPresent(sessionTokenText, AwsEnvVars.sessionToken(vars));
+            applyIfPresent(regionText, AwsEnvVars.region(vars));
+            // Replace the pasted block in the field the user pasted into with just
+            // that field's own value (or clear it if the block held no such value).
+            String own = ownValue(ownVar, vars);
+            setText(source, own == null ? "" : own);
+            if (!source.isDisposed()) {
+                source.setSelection(source.getCharCount());
+            }
+        } finally {
+            autoFilling = false;
+        }
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    private static String ownValue(String ownVar, Map<String, String> vars) {
+        if (ownVar == null) {
+            return null;
+        }
+        switch (ownVar) {
+            case "AWS_REGION":
+                return AwsEnvVars.region(vars);
+            case "AWS_SESSION_TOKEN":
+                return AwsEnvVars.sessionToken(vars);
+            default:
+                return vars.get(ownVar);
+        }
+    }
+
+    private static void applyIfPresent(Text field, String value) {
+        if (field != null && !field.isDisposed() && value != null && !value.isEmpty()) {
+            field.setText(value);
+        }
+    }
+
+    @Override
+    public void loadSettings(DBPDataSourceContainer dataSource) {
+        DBPConnectionConfiguration cfg = dataSource.getConnectionConfiguration();
+        setText(userNameText, cfg.getUserName());
+        setText(regionText, cfg.getAuthProperty(RDSIAMConstants.PROP_REGION));
+        setText(accessKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID));
+        setText(secretKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY));
+        setText(sessionTokenText, cfg.getAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN));
+    }
+
+    @Override
+    public void saveSettings(DBPDataSourceContainer dataSource) {
+        DBPConnectionConfiguration cfg = dataSource.getConnectionConfiguration();
+        cfg.setUserName(trim(userNameText));
+        cfg.setAuthProperty(RDSIAMConstants.PROP_REGION, trimToNull(regionText));
+        cfg.setAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID, trimToNull(accessKeyText));
+        cfg.setAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY, trimToNull(secretKeyText));
+        cfg.setAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN, trimToNull(sessionTokenText));
+    }
+
+    @Override
+    public void resetSettings(DBPDataSourceContainer dataSource) {
+        loadSettings(dataSource);
+    }
+
+    @Override
+    public boolean isComplete() {
+        return notEmpty(userNameText) && notEmpty(accessKeyText) && notEmpty(secretKeyText);
+    }
+
+    private static boolean notEmpty(Text text) {
+        return text != null && !text.isDisposed() && !text.getText().trim().isEmpty();
+    }
+
+    private static void setText(Text text, String value) {
+        if (text != null && !text.isDisposed()) {
+            text.setText(value == null ? "" : value);
+        }
+    }
+
+    private static String trim(Text text) {
+        return (text == null || text.isDisposed()) ? "" : text.getText().trim();
+    }
+
+    private static String trimToNull(Text text) {
+        String value = trim(text);
+        return value.isEmpty() ? null : value;
+    }
+}
