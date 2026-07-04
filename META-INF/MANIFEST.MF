@@ -1,11 +1,11 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: DBeaver AWS RDS IAM Authentication
-Bundle-SymbolicName: com.example.dbeaver.ext.rdsiam;singleton:=true
-Bundle-Version: 0.0.2
-Bundle-Vendor: Example
+Bundle-SymbolicName: com.elevential.dbeaver.ext.rdsiam;singleton:=true
+Bundle-Version: 0.1.0
+Bundle-Vendor: Elevential
 Bundle-RequiredExecutionEnvironment: JavaSE-21
-Automatic-Module-Name: com.example.dbeaver.ext.rdsiam
+Automatic-Module-Name: com.elevential.dbeaver.ext.rdsiam
 Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.swt,
  org.eclipse.jface,
@@ -13,4 +13,4 @@ Require-Bundle: org.eclipse.core.runtime,
  org.jkiss.dbeaver.ui,
  org.jkiss.dbeaver.ui.editors.connection
 Bundle-ActivationPolicy: lazy
-Export-Package: com.example.dbeaver.ext.rdsiam
+Export-Package: com.elevential.dbeaver.ext.rdsiam

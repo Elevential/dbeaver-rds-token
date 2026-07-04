@@ -2,12 +2,15 @@ name: Publish update site
 
 # Builds the plugin + p2 update site and publishes it to GitHub Pages.
 #
-# Version scheme:
-#   - push to main/master -> <base>.<UTC-timestamp>  (e.g. 0.0.2.20260703T2015)
-#     so every push publishes a strictly-newer build that DBeaver's
-#     "Check for Updates" will pick up.
-#   - tag vX.Y.Z          -> exactly X.Y.Z            (clean, pinned release)
-#   <base> is the major.minor.micro from META-INF/MANIFEST.MF (Bundle-Version).
+# Automatic semantic versioning (Conventional Commits):
+#   On every push to main/master the next version is computed from the commit
+#   messages since the last release tag, published, and tagged vX.Y.Z by CI:
+#     - "feat!: ..." / "fix!: ..." or "BREAKING CHANGE" in the body -> MAJOR bump
+#     - "feat: ..."                                                 -> MINOR bump
+#     - anything else (fix:, chore:, docs:, plain messages, ...)    -> PATCH bump
+#   First release (no tags yet) starts from the Bundle-Version in MANIFEST.MF.
+#   Pushing a tag vX.Y.Z manually still works and publishes exactly X.Y.Z.
+#   Tags created by CI use GITHUB_TOKEN, which does not re-trigger workflows.
 #
 # One-time repo setup:
 #   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
@@ -23,7 +26,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write   # CI pushes the vX.Y.Z release tag
   pages: write
   id-token: write
 
@@ -44,6 +47,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history + tags, needed to compute the next semver
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -51,19 +56,45 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Derive version
+      - name: Derive version (conventional commits)
         id: ver
         run: |
-          # Base = major.minor.micro from the committed Bundle-Version.
+          # Base = major.minor.micro from the committed Bundle-Version (used as
+          # the sed anchor when stamping, and as the first-release version).
           BASE=$(sed -n 's/^Bundle-Version: *//p' META-INF/MANIFEST.MF | cut -d. -f1-3)
+          NEWTAG=""
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            VER="${GITHUB_REF_NAME#v}"                       # v0.0.3 -> 0.0.3
+            VER="${GITHUB_REF_NAME#v}"                       # manual release: v0.1.0 -> 0.1.0
           else
-            VER="${BASE}.$(date -u +%Y%m%dT%H%M%S)"          # 0.0.2.20260703T201500
+            LAST=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)
+            if [ -z "$LAST" ]; then
+              VER="$BASE"                                    # first automated release
+            elif [ "$(git rev-list --count "$LAST"..HEAD)" = "0" ]; then
+              VER="${LAST#v}"                                # re-run on tagged commit: rebuild, no new tag
+            else
+              MAJ=$(echo "${LAST#v}" | cut -d. -f1)
+              MIN=$(echo "${LAST#v}" | cut -d. -f2)
+              PAT=$(echo "${LAST#v}" | cut -d. -f3)
+              LOG_SUBJECTS=$(git log --format='%s' "$LAST"..HEAD)
+              LOG_BODIES=$(git log --format='%B' "$LAST"..HEAD)
+              if echo "$LOG_SUBJECTS" | grep -qE '^[a-zA-Z]+(\([^)]*\))?!:' || echo "$LOG_BODIES" | grep -q 'BREAKING CHANGE'; then
+                MAJ=$((MAJ+1)); MIN=0; PAT=0
+              elif echo "$LOG_SUBJECTS" | grep -qE '^feat(\([^)]*\))?:'; then
+                MIN=$((MIN+1)); PAT=0
+              else
+                PAT=$((PAT+1))
+              fi
+              VER="$MAJ.$MIN.$PAT"
+            fi
+            # Tag this release unless the tag already exists (idempotent re-runs).
+            if ! git rev-parse -q --verify "refs/tags/v$VER" >/dev/null; then
+              NEWTAG="v$VER"
+            fi
           fi
-          echo "base=$BASE"       >> "$GITHUB_OUTPUT"
-          echo "version=$VER"     >> "$GITHUB_OUTPUT"
-          echo "Building version $VER (base $BASE)"
+          echo "base=$BASE"     >> "$GITHUB_OUTPUT"
+          echo "version=$VER"   >> "$GITHUB_OUTPUT"
+          echo "tag=$NEWTAG"    >> "$GITHUB_OUTPUT"
+          echo "Building version $VER (base $BASE, new tag: '${NEWTAG:-none}')"
 
       - name: Stamp version into manifest & feature
         run: |
@@ -98,3 +129,11 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Tag release
+        if: steps.ver.outputs.tag != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.ver.outputs.tag }}"
+          git push origin "${{ steps.ver.outputs.tag }}"

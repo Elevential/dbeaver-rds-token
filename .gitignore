@@ -6,7 +6,7 @@ dbeaver.tar.gz
 /dbeaver/
 
 # Built plugin jar (produced by build.sh / CI)
-com.example.dbeaver.ext.rdsiam_*.jar
+com.elevential.dbeaver.ext.rdsiam_*.jar
 
 # OS / editor cruft
 .DS_Store

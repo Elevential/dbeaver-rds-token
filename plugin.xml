@@ -8,7 +8,7 @@
             id="aws_rds_iam"
             label="AWS RDS IAM"
             description="Authenticate to Amazon RDS using an IAM-generated database auth token instead of a static password."
-            class="com.example.dbeaver.ext.rdsiam.RDSIAMAuthModel">
+            class="com.elevential.dbeaver.ext.rdsiam.RDSIAMAuthModel">
             <!--
               Offer this auth model on RDS-capable datasource providers. The
               mysql provider also covers MariaDB drivers. Add more <datasource>
@@ -22,8 +22,8 @@
     <!-- Register the connection-dialog UI panel for the auth model. -->
     <extension point="org.jkiss.dbeaver.ui.propertyConfigurator">
         <propertyConfigurator
-            class="com.example.dbeaver.ext.rdsiam.RDSIAMAuthModel"
-            uiClass="com.example.dbeaver.ext.rdsiam.ui.RDSIAMAuthConfigurator"/>
+            class="com.elevential.dbeaver.ext.rdsiam.RDSIAMAuthModel"
+            uiClass="com.elevential.dbeaver.ext.rdsiam.ui.RDSIAMAuthConfigurator"/>
     </extension>
 
 </plugin>

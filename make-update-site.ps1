@@ -14,7 +14,7 @@
     Env overrides:
       $env:ECLIPSE_HOME  dir containing plugins\ (a DBeaver install root)
       $env:DBEAVER_APP   DBeaver install dir   (default: C:\Program Files\DBeaver)
-      $env:VERSION       plugin/feature version (default: 0.0.2)
+      $env:VERSION       plugin/feature version (default: 0.0.3)
 #>
 [CmdletBinding()]
 param()
@@ -22,9 +22,9 @@ param()
 $ErrorActionPreference = 'Stop'
 $Here = $PSScriptRoot
 
-$Bsn       = 'com.example.dbeaver.ext.rdsiam'
+$Bsn       = 'com.elevential.dbeaver.ext.rdsiam'
 $FeatureId = "$Bsn.feature"
-$Version   = if ($env:VERSION) { $env:VERSION } else { '0.0.2' }
+$Version   = if ($env:VERSION) { $env:VERSION } else { '0.0.3' }
 
 # --- Resolve DBeaver "Eclipse home" (dir containing plugins\). -----------------
 $DbeaverApp = if ($env:DBEAVER_APP) { $env:DBEAVER_APP } else { 'C:\Program Files\DBeaver' }

@@ -12,7 +12,7 @@
 # Env overrides:
 #   ECLIPSE_HOME  dir containing plugins/ (Linux DBeaver / target platform)
 #   DBEAVER_APP   path to DBeaver.app   (default: /Applications/DBeaver.app)
-#   VERSION       plugin/feature version (default: 0.0.2)
+#   VERSION       plugin/feature version (default: 0.0.3)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -32,9 +32,9 @@ else
 fi
 PLUGINS="$ECLIPSE_HOME/plugins"
 
-BSN="com.example.dbeaver.ext.rdsiam"
+BSN="com.elevential.dbeaver.ext.rdsiam"
 FEATURE_ID="${BSN}.feature"
-VERSION="${VERSION:-0.0.2}"
+VERSION="${VERSION:-0.0.3}"
 
 LAUNCHER=$(ls "$PLUGINS"/org.eclipse.equinox.launcher_*.jar 2>/dev/null | head -1)
 # Prefer the JDK on PATH (CI sets JAVA_HOME); fall back to a bundled/located JRE.

@@ -1,7 +1,7 @@
 /*
  * DBeaver AWS RDS IAM Authentication extension.
  */
-package com.example.dbeaver.ext.rdsiam;
+package com.elevential.dbeaver.ext.rdsiam;
 
 import org.jkiss.dbeaver.model.impl.auth.AuthModelDatabaseNativeCredentials;
 

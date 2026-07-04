@@ -1,11 +1,11 @@
 /*
  * DBeaver AWS RDS IAM Authentication extension.
  */
-package com.example.dbeaver.ext.rdsiam.ui;
+package com.elevential.dbeaver.ext.rdsiam.ui;
 
-import com.example.dbeaver.ext.rdsiam.AwsEnvVars;
-import com.example.dbeaver.ext.rdsiam.AwsProfiles;
-import com.example.dbeaver.ext.rdsiam.RDSIAMConstants;
+import com.elevential.dbeaver.ext.rdsiam.AwsEnvVars;
+import com.elevential.dbeaver.ext.rdsiam.AwsProfiles;
+import com.elevential.dbeaver.ext.rdsiam.RDSIAMConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
@@ -118,13 +118,35 @@ public class RDSIAMAuthConfigurator
     }
 
     /**
-     * Adds a modify listener that both notifies the dialog of changes and, if the
-     * user pastes a shell "export AWS_.../set AWS_.../$env:AWS_..." block, spreads
-     * the parsed values across the credential fields.
+     * Wires the paste-to-autofill behavior plus dialog change notification.
+     *
+     * The Verify listener is essential: it fires BEFORE insertion with the FULL
+     * pasted string. Single-line Text controls on Windows (and GTK) truncate a
+     * multi-line paste at the first line break, so a ModifyListener alone would
+     * only ever see the first "export AWS_ACCESS_KEY_ID=…" line and fill nothing
+     * but the access key. Here we detect the credentials block in the verify
+     * event, suppress the raw insertion, and distribute the values ourselves.
      *
      * @param ownVar the AWS_* variable this field represents, or null (user name).
      */
     private void attach(Text field, String ownVar) {
+        field.addVerifyListener(e -> {
+            if (autoFilling) {
+                return;
+            }
+            if (e.text != null && AwsEnvVars.looksLikeCredentialsBlock(e.text)) {
+                final String block = e.text;
+                e.doit = false; // don't insert the raw block into this field
+                // Mutate the widgets outside the verify callback.
+                field.getDisplay().asyncExec(() -> {
+                    if (!field.isDisposed()) {
+                        autoFill(field, ownVar, block);
+                    }
+                });
+            }
+        });
+        // Fallback path (e.g. drag&drop or programmatic set that bypasses verify
+        // interception): if a full block still lands as field content, spread it.
         field.addModifyListener(e -> onModify(field, ownVar));
     }
 
@@ -134,14 +156,14 @@ public class RDSIAMAuthConfigurator
             return;
         }
         if (AwsEnvVars.looksLikeCredentialsBlock(source.getText())) {
-            autoFillFrom(source, ownVar);
+            autoFill(source, ownVar, source.getText());
         } else if (changeListener != null) {
             changeListener.run();
         }
     }
 
-    private void autoFillFrom(Text source, String ownVar) {
-        Map<String, String> vars = AwsEnvVars.parse(source.getText());
+    private void autoFill(Text source, String ownVar, String block) {
+        Map<String, String> vars = AwsEnvVars.parse(block);
         autoFilling = true;
         try {
             applyIfPresent(accessKeyText, vars.get("AWS_ACCESS_KEY_ID"));

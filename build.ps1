@@ -16,7 +16,7 @@
       $env:ECLIPSE_HOME  dir containing plugins\ (a DBeaver install root)
       $env:DBEAVER_APP   DBeaver install dir   (default: C:\Program Files\DBeaver)
       $env:JAVA_HOME     a JDK 21+ (needs javac)
-      $env:VERSION       plugin version        (default: 0.0.2)
+      $env:VERSION       plugin version        (default: 0.0.3)
 
     Examples:
       .\build.ps1
@@ -30,8 +30,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $Here = $PSScriptRoot
 
-$Bsn     = 'com.example.dbeaver.ext.rdsiam'
-$Version = if ($env:VERSION) { $env:VERSION } else { '0.0.2' }
+$Bsn     = 'com.elevential.dbeaver.ext.rdsiam'
+$Version = if ($env:VERSION) { $env:VERSION } else { '0.0.3' }
 $JarName = "${Bsn}_${Version}.jar"
 
 # --- Resolve the DBeaver "Eclipse home" (the dir that contains plugins\). ------

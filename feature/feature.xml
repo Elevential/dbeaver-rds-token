@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="com.example.dbeaver.ext.rdsiam.feature"
+      id="com.elevential.dbeaver.ext.rdsiam.feature"
       label="DBeaver AWS RDS IAM Authentication"
-      version="0.0.2"
-      provider-name="Example">
+      version="0.1.0"
+      provider-name="Elevential">
 
    <description>
       Adds an "AWS RDS IAM" authentication model to DBeaver. Connect to Amazon
@@ -12,7 +12,7 @@
    </description>
 
    <copyright>
-      Example.
+      Elevential.
    </copyright>
 
    <license url="https://www.apache.org/licenses/LICENSE-2.0">
@@ -20,7 +20,7 @@
    </license>
 
    <plugin
-         id="com.example.dbeaver.ext.rdsiam"
+         id="com.elevential.dbeaver.ext.rdsiam"
          download-size="0"
          install-size="0"
          version="0.0.0"

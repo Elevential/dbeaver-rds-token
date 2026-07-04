@@ -49,12 +49,12 @@ other connection secret). The generated token itself is never persisted.
 ## Project layout
 
 ```
-dbeaver-rds-iam-auth/
+dbeaver-rds-iam/
 ├── META-INF/MANIFEST.MF        # OSGi bundle manifest
 ├── plugin.xml                  # registers the auth model + UI configurator
 ├── build.properties
 ├── .project / .classpath       # Eclipse PDE project files
-└── src/com/example/dbeaver/ext/rdsiam/
+└── src/com/elevential/dbeaver/ext/rdsiam/
     ├── RDSAuthTokenGenerator.java   # dependency-free SigV4 token generator
     ├── RDSIAMConstants.java
     ├── RDSIAMCredentials.java
@@ -71,14 +71,14 @@ packages an OSGi jar. It needs a JDK 21+ (DBeaver 26 ships Java 21 bytecode).
 **macOS / Linux / WSL** (bash):
 
 ```bash
-./build.sh            # -> com.example.dbeaver.ext.rdsiam_0.0.2.jar
+./build.sh            # -> com.elevential.dbeaver.ext.rdsiam_0.0.3.jar
 ./build.sh --install  # build and register into your local DBeaver
 ```
 
 **Windows** (PowerShell) — native, no WSL needed:
 
 ```powershell
-.\build.ps1            # -> com.example.dbeaver.ext.rdsiam_0.0.2.jar
+.\build.ps1            # -> com.elevential.dbeaver.ext.rdsiam_0.0.3.jar
 .\build.ps1 -Install   # build and register into your local DBeaver
 ```
 
@@ -103,7 +103,7 @@ this for you:
 2. Adds a line to
    `<dbeaver>/configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`:
    ```
-   com.example.dbeaver.ext.rdsiam,0.0.2,plugins/com.example.dbeaver.ext.rdsiam_0.0.2.jar,4,false
+   com.elevential.dbeaver.ext.rdsiam,0.0.3,plugins/com.elevential.dbeaver.ext.rdsiam_0.0.3.jar,4,false
    ```
    (a `.bak-rdsiam` backup is written first).
 
@@ -204,6 +204,25 @@ Also recognized: plain `AWS_ACCESS_KEY_ID=...` lines, `AWS_REGION` /
 > A DBeaver p2 update may rewrite `bundles.info` and drop the entry; just re-run
 > `./build.sh --install` if the option disappears after an update.
 
+
+## Releases & automatic versioning
+
+Versioning is automatic (semver via [Conventional Commits](https://www.conventionalcommits.org)).
+On every push to `main`, CI computes the next version from the commit messages
+since the last release tag, publishes the update site to GitHub Pages, and
+pushes the `vX.Y.Z` tag itself:
+
+| Commit message | Bump |
+|---|---|
+| `feat!: …` / `fix!: …` or `BREAKING CHANGE` in the body | **major** |
+| `feat: …` | **minor** |
+| anything else (`fix:`, `chore:`, `docs:`, plain text) | **patch** |
+
+You never edit version numbers by hand. The `Bundle-Version` in
+`META-INF/MANIFEST.MF` only seeds the *first* release (when no tags exist yet)
+and serves as the stamping anchor — keep it, but don't bump it. Pushing a tag
+`vX.Y.Z` manually still publishes exactly that version if you ever need to
+force one. Users receive each release via **Help → Check for Updates**.
 
 ## Version / API notes
 

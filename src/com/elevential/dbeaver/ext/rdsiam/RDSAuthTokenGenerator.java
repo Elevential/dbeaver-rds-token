@@ -12,7 +12,7 @@
  * valid for 15 minutes. This is implemented with the plain JDK crypto
  * primitives so the plugin has no external (AWS SDK) dependencies.
  */
-package com.example.dbeaver.ext.rdsiam;
+package com.elevential.dbeaver.ext.rdsiam;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
