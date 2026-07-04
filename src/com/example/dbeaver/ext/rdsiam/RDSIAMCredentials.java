@@ -19,6 +19,7 @@ public class RDSIAMCredentials extends AuthModelDatabaseNativeCredentials {
     private String awsSessionToken;
     private String region;
     private String profile;
+    private boolean requireSsl = true;
 
     public String getAwsAccessKeyId() {
         return awsAccessKeyId;
@@ -58,5 +59,13 @@ public class RDSIAMCredentials extends AuthModelDatabaseNativeCredentials {
 
     public void setProfile(String profile) {
         this.profile = profile;
+    }
+
+    public boolean isRequireSsl() {
+        return requireSsl;
+    }
+
+    public void setRequireSsl(boolean requireSsl) {
+        this.requireSsl = requireSsl;
     }
 }

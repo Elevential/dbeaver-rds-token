@@ -9,6 +9,7 @@ import com.example.dbeaver.ext.rdsiam.RDSIAMConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
@@ -44,6 +45,7 @@ public class RDSIAMAuthConfigurator
     private Text accessKeyText;
     private Text secretKeyText;
     private Text sessionTokenText;
+    private Button requireSslCheck;
 
     @Override
     public void createControl(Composite authPanel, DBAAuthModel<?> object, Runnable propertyChangeListener) {
@@ -99,6 +101,20 @@ public class RDSIAMAuthConfigurator
         sessionTokenText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         sessionTokenText.setToolTipText("Optional. Required only for temporary (STS) credentials.");
         attach(sessionTokenText, "AWS_SESSION_TOKEN");
+
+        requireSslCheck = new Button(authPanel, SWT.CHECK);
+        requireSslCheck.setText("Require SSL/TLS (recommended — RDS IAM needs an encrypted connection)");
+        requireSslCheck.setToolTipText("Injects the driver's SSL properties at connect time. "
+            + "Ignored if you configure SSL yourself in the SSL tab.");
+        GridData sslData = new GridData(GridData.FILL_HORIZONTAL);
+        sslData.horizontalSpan = 2;
+        requireSslCheck.setLayoutData(sslData);
+        requireSslCheck.setSelection(true);
+        requireSslCheck.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
+            if (changeListener != null) {
+                changeListener.run();
+            }
+        }));
     }
 
     /**
@@ -225,6 +241,10 @@ public class RDSIAMAuthConfigurator
         setText(accessKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID));
         setText(secretKeyText, cfg.getAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY));
         setText(sessionTokenText, cfg.getAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN));
+        if (requireSslCheck != null && !requireSslCheck.isDisposed()) {
+            // Default to enabled unless explicitly turned off.
+            requireSslCheck.setSelection(!"false".equals(cfg.getAuthProperty(RDSIAMConstants.PROP_REQUIRE_SSL)));
+        }
         onProfileChanged();
     }
 
@@ -237,6 +257,8 @@ public class RDSIAMAuthConfigurator
         cfg.setAuthProperty(RDSIAMConstants.PROP_ACCESS_KEY_ID, trimToNull(accessKeyText));
         cfg.setAuthProperty(RDSIAMConstants.PROP_SECRET_ACCESS_KEY, trimToNull(secretKeyText));
         cfg.setAuthProperty(RDSIAMConstants.PROP_SESSION_TOKEN, trimToNull(sessionTokenText));
+        boolean requireSsl = requireSslCheck == null || requireSslCheck.isDisposed() || requireSslCheck.getSelection();
+        cfg.setAuthProperty(RDSIAMConstants.PROP_REQUIRE_SSL, requireSsl ? "true" : "false");
     }
 
     @Override

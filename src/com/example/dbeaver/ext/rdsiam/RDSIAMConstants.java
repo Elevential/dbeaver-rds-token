@@ -30,6 +30,13 @@ public final class RDSIAMConstants {
      */
     public static final String PROP_PROFILE = "@rds-iam.profile";
 
+    /**
+     * Auth-property key for the "require SSL/TLS" toggle. RDS IAM authentication
+     * requires an encrypted connection; when enabled (the default) the plugin
+     * injects the driver's SSL properties at connect time. Value "true"/"false".
+     */
+    public static final String PROP_REQUIRE_SSL = "@rds-iam.requireSsl";
+
     private RDSIAMConstants() {
     }
 }
